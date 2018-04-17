@@ -3,7 +3,7 @@ library(readxl)
 library(tidyverse)
 
 ###Loading Data
-global_mortality <- read_excel("C:/Users/ia767/Downloads/global_mortality.xlsx")
+global_mortality <- read_excel("global_mortality.xlsx")
 
 ##Tidying: new column names
 new_names <- vector() #create empty vector for the new column names
@@ -17,7 +17,7 @@ for (i in names(global_mortality)) { #replace names of column with shorter names
 names(global_mortality) <- new_names
 
 ##Adding GDP Dataset
-OECD_GDP <- read.csv("C:/Users/ia767/Downloads/DP_LIVE_17042018021501126.csv", header=FALSE)
+OECD_GDP <- read.csv("DP_LIVE_17042018021501126.csv", header=FALSE)
 names(OECD_GDP) <- c("country_code", "Indicator", "Subject", "Masure", "Frequency", "year", 
                      "GDP", "Flags") #rename columns
 OECD_GDP <- OECD_GDP[-1, c(1, 6, 7)] #select country, year, gdp
