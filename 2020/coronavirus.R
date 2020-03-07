@@ -16,6 +16,29 @@ format_df <- function(df){
   return(df)
 }
 
+## Helper Function: Sum by Country
+country_current_total <- function(df){
+  df <- df %>%
+    group_by(`Country/Region`, date_key) %>% 
+    summarise(date_val = sum(date_val)) %>%
+    ungroup()
+    
+  return(df)
+}
+
+## Helper Function: Latest Total
+latest_total <- function(df){
+  df <- df %>%
+    country_current_total() %>%
+    filter(date_key == max(.$date_key)) %>%
+    select(-date_key) %>%
+    rename(Total = date_val) %>%
+    arrange(desc(Total))
+  
+  return(df)
+}
+
+
 ## Clean DFs
 confirmed_cases <- confirmed_cases %>% format_df()
 deaths <- deaths %>% format_df()
@@ -67,10 +90,7 @@ ggplot() +
 
 
 ### DISEASE SPREAD SINCE FIRST CONFIRMED CASE ####
-confirmed_cases_by_country <- confirmed_cases %>% 
-  group_by(`Country/Region`, date_key) %>% 
-  summarise(date_val = sum(date_val)) %>%
-  ungroup()
+confirmed_cases_by_country <- confirmed_cases %>% country_current_total()
 
 most_cases_country <- confirmed_cases_by_country %>% 
   filter(date_key == max(.$date_key) & `Country/Region` != "Others") %>% 
@@ -97,3 +117,8 @@ confirmed_cases_spread %>%
   scale_color_manual(values = color_scheme) + 
   labs(x = "Days since 1st Recorded Case", y = "# Confirmed Cases", color = "Country",
        title = "Covid-19", subtitle = "Spread Since 1st Confirmed Case")
+
+### TABLES ####
+confirmed_cases %>% latest_total() ## CONFIRMED CASES BY COUNTRY/REGION
+deaths %>% latest_total() ## TOTAL DEATHS
+recoveries %>% latest_total() ## TOTAL RECOVERIES
