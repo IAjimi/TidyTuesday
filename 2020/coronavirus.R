@@ -1,3 +1,4 @@
+## SETUP ####
 ## Loading Libraries
 library(tidyverse)
 library(gganimate)
@@ -7,6 +8,7 @@ confirmed_cases <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/CO
 deaths <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Deaths.csv")
 recoveries <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Recovered.csv")
 
+## HELPER FUNCTIONS ####
 ## Helper Function: Format dataset
 format_df <- function(df){
   df <- df %>% 
@@ -39,40 +41,62 @@ latest_total <- function(df){
 }
 
 
+## DATA PREP ####
 ## Clean DFs
 confirmed_cases <- confirmed_cases %>% format_df()
 deaths <- deaths %>% format_df()
 recoveries <- recoveries %>% format_df()
-
 ### World Map ####
 #partly from https://stackoverflow.com/questions/30706124/plotting-the-world-map-in-r
-WorldData <- map_data('world') %>% filter(region != "Antarctica") %>% fortify
+WorldData <- map_data('world') %>% filter(region != "Antarctica") %>% fortify 
 
+# Adding Column Flag for Countries w Confirmed Cases
+countries_w_confirmed_cases <- confirmed_cases %>% 
+  filter(date_val > 0) %>% 
+  distinct(`Country/Region`) %>%
+  mutate(`Country/Region` = case_when(
+    `Country/Region` == "US" ~ "USA",
+    `Country/Region` == "Mainland China" ~ "China",
+    T ~ `Country/Region`
+  ))
+
+WorldData <- WorldData %>% 
+  mutate(infected = region %in% countries_w_confirmed_cases$`Country/Region`)
+
+## GRAPHS ####
 ## STATIC: Most Recent Date
 ggplot() +
   geom_map(data = WorldData, map = WorldData,
-           aes(x = long, y = lat, group = group, map_id=region),
-           fill = "white", colour = "#7f7f7f", size=0.5) + 
+           aes(x = long, y = lat, group = group, map_id=region, fill = infected),
+           colour = "#c8c8c8", size=0.5) + 
   coord_map("rectangular", lat0=0, xlim=c(-180,180), ylim=c(-60, 90)) +
-  geom_point(data = filter(confirmed_cases, date_key == "2020-03-04"), 
-             aes(Long, Lat, size = date_val, color = "#db4551"), alpha = 0.6) +
-  #scale_color_manual(values = c("#db4551", '#455edb')) +
-  guides(size = FALSE, color = FALSE) +
+  geom_point(data = confirmed_cases %>% filter(date_key == max(.$date_key)), 
+             aes(Long, Lat, size = date_val, color = "#db4551"), 
+             alpha = 0.8) +
+  scale_fill_manual(values = c("#f7f7f7", "#fff4c3")) +
+  guides(size = FALSE, color = FALSE, fill = FALSE) +
   scale_y_continuous(breaks=c()) +
   scale_x_continuous(breaks=c()) +
-  labs(title="COVID-19", subtitle = "Confirmed Cases, 2020-03-04",
+  labs(title="COVID-19", subtitle = paste("Confirmed Cases", max(confirmed_cases$date_key), sep = ", "),
        x="", y="", color = "", caption = "Source: John Hopkins University") +
   theme_bw()
 
 ## GIF: Over Time
 ggplot() +
   geom_map(data = WorldData, map = WorldData,
-           aes(x = long, y = lat, group = group, map_id=region),
-           fill = "white", colour = "#7f7f7f", size=0.5) + 
+           aes(x = long, y = lat, group = group, map_id=region, fill = infected),
+           colour = "#c8c8c8", size=0.5) + 
   coord_map("rectangular", lat0=0, xlim=c(-180,180), ylim=c(-60, 90)) +
-  geom_point(data = confirmed_cases, 
-             aes(Long, Lat, size = date_val, color = "#db4551"), alpha = 0.6) +
-  #scale_color_manual(values = c("#db4551", '#455edb')) +
+  geom_point(data = confirmed_cases %>% filter(date_key == max(.$date_key)), 
+             aes(Long, Lat, size = date_val, color = "#db4551"), 
+             alpha = 0.8) +
+  scale_fill_manual(values = c("#f7f7f7", "#fff4c3")) +
+  guides(size = FALSE, color = FALSE, fill = FALSE) +
+  scale_y_continuous(breaks=c()) +
+  scale_x_continuous(breaks=c()) +
+  labs(title="COVID-19", subtitle = "Confirmed Cases Over Time",
+       x="", y="", color = "", caption = "Source: John Hopkins University") +
+  theme_bw() +
   transition_states(
     date_key,
     transition_length = 2,
@@ -80,13 +104,7 @@ ggplot() +
   ) +
   enter_fade() + 
   exit_shrink() +
-  ease_aes('sine-in-out') +
-  guides(size = FALSE, color = FALSE) +
-  scale_y_continuous(breaks=c()) +
-  scale_x_continuous(breaks=c()) +
-  labs(title="COVID-19", subtitle = "Confirmed Cases",
-       x="", y="", color = "", caption = "Source: Johns Hopkins University") +
-  theme_bw()
+  ease_aes('sine-in-out')
 
 
 ### DISEASE SPREAD SINCE FIRST CONFIRMED CASE ####
@@ -108,7 +126,7 @@ color_scheme <- c("Mainland China" = "#003399",
                    "Iran" = "#FF2B4F",
                   "Italy" = "#fcab27",
                   "South Korea" = "#3686d3",
-                  "Germany" = "darkgrey")
+                  "France" = "darkgrey")
 
 confirmed_cases_spread %>%
   filter(`Country/Region` %in% most_cases_country$`Country/Region`) %>%
@@ -119,6 +137,9 @@ confirmed_cases_spread %>%
        title = "Covid-19", subtitle = "Spread Since 1st Confirmed Case")
 
 ### TABLES ####
-confirmed_cases %>% latest_total() ## CONFIRMED CASES BY COUNTRY/REGION
-deaths %>% latest_total() ## TOTAL DEATHS
-recoveries %>% latest_total() ## TOTAL RECOVERIES
+total_cases <- confirmed_cases %>% latest_total() %>% rename(`# Confirmed Cases` = `Total`)
+total_deaths <- deaths %>% latest_total() %>% rename(`# Deaths` = `Total`)
+total_recoveries <- recoveries %>% latest_total()%>% rename(`# Recoveries` = `Total`)
+
+# Display Table
+total_cases %>% inner_join(total_deaths) %>% inner_join(total_recoveries)
