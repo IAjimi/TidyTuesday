@@ -1,6 +1,5 @@
 ## SETUP ####
 ## Loading Libraries
-library(flexdashboard)
 library(mapproj)
 library(maps)
 library(tidyverse)
