@@ -1,10 +1,16 @@
-## SETUP ####
-## Loading Libraries
+---
+title: "COVID 19 Dashboard"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
 library(flexdashboard)
 library(mapproj)
 library(maps)
 library(tidyverse)
-library(gganimate)
 
 ## Reading Data
 confirmed_cases <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Confirmed.csv")
@@ -27,7 +33,7 @@ country_current_total <- function(df){
     group_by(`Country/Region`, date_key) %>% 
     summarise(date_val = sum(date_val)) %>%
     ungroup()
-    
+  
   return(df)
 }
 
@@ -49,6 +55,7 @@ latest_total <- function(df){
 confirmed_cases <- confirmed_cases %>% format_df()
 deaths <- deaths %>% format_df()
 recoveries <- recoveries %>% format_df()
+
 ### World Map ####
 #partly from https://stackoverflow.com/questions/30706124/plotting-the-world-map-in-r
 WorldData <- map_data('world') %>% filter(region != "Antarctica") %>% fortify 
@@ -65,9 +72,15 @@ countries_w_confirmed_cases <- confirmed_cases %>%
 
 WorldData <- WorldData %>% 
   mutate(infected = region %in% countries_w_confirmed_cases$`Country/Region`)
+```
 
-## GRAPHS ####
-## STATIC: Most Recent Date
+
+Row {data-height=650}
+-------------------------------------
+    
+### COVID-19 Geographic Spread {.no-padding}
+    
+```{r World Map Plot, fig.width=20, fig.height=10}
 ggplot() +
   geom_map(data = WorldData, map = WorldData,
            aes(x = long, y = lat, group = group, map_id=region, fill = infected),
@@ -75,7 +88,7 @@ ggplot() +
   coord_map("rectangular", lat0=0, xlim=c(-180,180), ylim=c(-60, 90)) +
   geom_point(data = confirmed_cases %>% filter(date_key == max(.$date_key)), 
              aes(Long, Lat, size = date_val, color = "#db4551"), 
-             alpha = 0.8) +
+             alpha = 0.85) +
   scale_fill_manual(values = c("#f7f7f7", "#fff4c3")) +
   guides(size = FALSE, color = FALSE, fill = FALSE) +
   scale_y_continuous(breaks=c()) +
@@ -83,34 +96,14 @@ ggplot() +
   labs(title="COVID-19", subtitle = paste("Confirmed Cases", max(confirmed_cases$date_key), sep = ", "),
        x="", y="", color = "", caption = "Source: John Hopkins University") +
   theme_bw()
-
-## GIF: Over Time
-ggplot() +
-  geom_map(data = WorldData, map = WorldData,
-           aes(x = long, y = lat, group = group, map_id=region, fill = infected),
-           colour = "#c8c8c8", size=0.5) + 
-  coord_map("rectangular", lat0=0, xlim=c(-180,180), ylim=c(-60, 90)) +
-  geom_point(data = confirmed_cases %>% filter(date_key == max(.$date_key)), 
-             aes(Long, Lat, size = date_val, color = "#db4551"), 
-             alpha = 0.8) +
-  scale_fill_manual(values = c("#f7f7f7", "#fff4c3")) +
-  guides(size = FALSE, color = FALSE, fill = FALSE) +
-  scale_y_continuous(breaks=c()) +
-  scale_x_continuous(breaks=c()) +
-  labs(title="COVID-19", subtitle = "Confirmed Cases Over Time",
-       x="", y="", color = "", caption = "Source: John Hopkins University") +
-  theme_bw() +
-  transition_states(
-    date_key,
-    transition_length = 2,
-    state_length = 1
-  ) +
-  enter_fade() + 
-  exit_shrink() +
-  ease_aes('sine-in-out')
-
-
-### DISEASE SPREAD SINCE FIRST CONFIRMED CASE ####
+```
+   
+Row {data-height=550}
+-------------------------------------
+    
+### Progress Since 1st Case {.no-padding}
+    
+```{r Progress since 1st Case}
 confirmed_cases_by_country <- confirmed_cases %>% country_current_total()
 
 most_cases_country <- confirmed_cases_by_country %>% 
@@ -137,21 +130,20 @@ confirmed_cases_spread %>%
   geom_line(size = 1) +
   scale_color_manual(values = color_scheme) + 
   labs(x = "Days since 1st Recorded Case", y = "# Confirmed Cases", color = "Country")
+```
+    
+### Current Tally {.no-padding}
 
-### TABLES ####
+```{r Current Tally}
 total_confirmed_cases <- confirmed_cases %>% latest_total()  %>% rename(`Total Cases` = Total)
 total_deaths <- deaths %>% latest_total() %>% rename(`Total Deaths` = Total)
 total_recoveries <- recoveries  %>% latest_total() %>% rename(`Total Recoveries` = Total)
 
-# Display Table
-total_cases %>% inner_join(total_deaths) %>% inner_join(total_recoveries)
-
-# Graph
 col_scale <- c("Total Recoveries"= "#00429d", "Ongoing Cases" =  "grey", 
                #"Total Recoveries" = "#73a2c6",  
                "Total Deaths" = "#93003a"
                #"Total Recoveries" = "#00429d"
-)
+               )
 
 total_confirmed_cases %>% 
   inner_join(total_deaths) %>% 
@@ -166,3 +158,4 @@ total_confirmed_cases %>%
   scale_fill_manual(values = col_scale) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   labs(x = "", y = "", fill = "") 
+```
