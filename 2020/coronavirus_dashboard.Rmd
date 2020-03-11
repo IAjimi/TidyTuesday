@@ -10,6 +10,12 @@ output:
 library(flexdashboard)
 library(mapproj)
 library(maps)
+library(sf)
+library(mapview)
+library(tmap)
+library(spData)
+library(htmltools)
+library(leaflet)
 library(tidyverse)
 
 ## Reading Data
@@ -81,21 +87,48 @@ Row {data-height=650}
 ### COVID-19 Geographic Spread {.no-padding}
     
 ```{r World Map Plot, fig.width=20, fig.height=10}
-ggplot() +
-  geom_map(data = WorldData, map = WorldData,
-           aes(x = long, y = lat, group = group, map_id=region, fill = infected),
-           colour = "#c8c8c8", size=0.5) + 
-  coord_map("rectangular", lat0=0, xlim=c(-180,180), ylim=c(-60, 90)) +
-  geom_point(data = confirmed_cases %>% filter(date_key == max(.$date_key)), 
-             aes(Long, Lat, size = date_val, color = "#db4551"), 
-             alpha = 0.85) +
-  scale_fill_manual(values = c("#f7f7f7", "#fff4c3")) +
-  guides(size = FALSE, color = FALSE, fill = FALSE) +
-  scale_y_continuous(breaks=c()) +
-  scale_x_continuous(breaks=c()) +
-  labs(title="COVID-19", subtitle = paste("Confirmed Cases", max(confirmed_cases$date_key), sep = ", "),
-       x="", y="", color = "", caption = "Source: John Hopkins University") +
-  theme_bw()
+confirmed_cases %>%
+  rename(Cases = date_val) %>%
+  inner_join(rename(deaths, Deaths = date_val)) %>%
+  inner_join(rename(recoveries, Recoveries = date_val)) %>%
+  filter(date_key == max(.$date_key)) %>%
+  mutate(map_label = if_else(is.na(`Province/State`), `Country/Region`, `Province/State`)) %>%
+  mutate(map_label_cases = paste(map_label, "\n Confirmed Cases:", Cases),
+         map_label_deaths = paste(map_label, "\n Deaths:", Deaths),
+         map_label_recoveries = paste(map_label, "\n Recoveries:", Recoveries)) %>%
+  leaflet() %>% 
+  addProviderTiles(providers$CartoDB.Positron) %>%
+  addCircleMarkers(weight = 1,
+                   color = "red",
+                  label = ~as.character(map_label_cases),
+                   radius = ~ log10(Cases) * 1.5, 
+                   popup = ~htmlEscape(map_label),
+                   stroke = FALSE,
+                  fillOpacity = 0.5,
+                  labelOptions = labelOptions(textsize = "15px"),
+                  group = "Confirmed Cases") %>%
+  addCircleMarkers(weight = 1,
+                   color = "black",
+                   label = ~as.character(map_label_deaths),
+                   radius = ~ log10(Deaths) * 1.5, 
+                   popup = ~htmlEscape(map_label_deaths),
+                   stroke = FALSE,
+                   fillOpacity = 0.5,
+                   labelOptions = labelOptions(textsize = "15px"),
+                   group = "Deaths") %>%
+  addCircleMarkers(weight = 1,
+                   color = "green",
+                   label = ~as.character(map_label_recoveries),
+                   radius = ~ log10(Recoveries) * 1.5, 
+                   popup = ~htmlEscape(map_label_recoveries),
+                   stroke = FALSE,
+                   fillOpacity = 0.5,
+                   labelOptions = labelOptions(textsize = "15px"),
+                   group = "Recoveries") %>%
+  addLayersControl(
+    overlayGroups = c("Confirmed Cases", "Deaths", "Recoveries"),
+    options = layersControlOptions(collapsed = FALSE)
+  ) %>% hideGroup("Deaths") %>% hideGroup("Recoveries")
 ```
    
 Row {data-height=550}
@@ -118,11 +151,7 @@ confirmed_cases_spread <- confirmed_cases_by_country %>%
 
 confirmed_cases_spread <- do.call("rbind.data.frame", confirmed_cases_spread)
 
-color_scheme <- c("Mainland China" = "#003399",
-                  "Iran" = "#FF2B4F",
-                  "Italy" = "#fcab27",
-                  "South Korea" = "#3686d3",
-                  "France" = "darkgrey")
+color_scheme <- c("#003399","#FF2B4F", "#fcab27", "#3686d3","darkgrey")
 
 confirmed_cases_spread %>%
   filter(`Country/Region` %in% most_cases_country$`Country/Region`) %>%
