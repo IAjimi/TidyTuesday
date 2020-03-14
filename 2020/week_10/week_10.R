@@ -23,8 +23,6 @@ salary_potential %>%
   mutate(roi = early_career_pay / total_price)
 
 # RETURNS TO EDUCATION: PUBLIC V. PRIVATE ####
-salary_label <- c(early_career_pay = "Early Career", mid_career_pay = "Mid Career")
-
 salary_potential_by_type <- salary_potential %>%
   left_join(select(tuition_income, name, total_price, year)) %>%
   left_join(select(tuition_cost, name, state_name = state, type, degree_length)) %>%
@@ -39,7 +37,7 @@ salary_potential_by_type <- salary_potential %>%
 salary_potential_by_type %>%
   ggplot(aes(total_price, pay_value, color = type)) +
   geom_point(alpha = 0.6) +
-  scale_color_manual(values=c("#2C5A85", "#884147")) +
+  scale_color_manual(values=c("#3a74ab", "#c74651")) +
   scale_x_continuous(breaks = seq(0, 70000, 12500), trans = "log", labels = dollar) +
   scale_y_continuous(breaks = seq(0, 170000, 25000), trans = "log", labels = dollar) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
@@ -71,8 +69,8 @@ educational_returns <- salary_potential %>%
   distinct()
 
 # Finding Best Predictive Model, excluding variables with high missingness
-models <- regsubsets(early_career_pay ~ rank + state_name + stem_percent + total_price + year + type + degree_length  + 
-                       total_enrollment +  pct_white + pct_women, 
+models <- regsubsets(early_career_pay ~  state_name + stem_percent + total_price + year + type + degree_length  + 
+                       total_enrollment +  pct_white + pct_women + make_world_better_percent, 
                      data = educational_returns, nvmax = 20, method = "seqrep")
 summary(models)
 
@@ -86,8 +84,8 @@ educational_returns <- educational_returns %>%
   )
   )
 
-reg <- lm(early_career_pay ~ rank + state_name + stem_percent + total_price + 
-            total_enrollment +  pct_white, 
+reg <- lm(early_career_pay ~ state_name + stem_percent + total_price + year + type + 
+            total_enrollment +  pct_white + pct_women, 
           data = educational_returns)
 summary(reg)
 
@@ -107,7 +105,7 @@ edu_plot %>%
   ggplot(aes(fct_reorder(name, school_performance), school_performance)) +
   geom_col() + 
   coord_flip() +
-  scale_y_continuous(limits = c(-12500, 12500), labels = dollar) +
+  scale_y_continuous(limits = c(-16500, 16500), labels = dollar) +
   labs(title = "School Performance", 
        subtitle = "Difference between Actual and Expected Early Career Pay",
        x = "",  y = "") 
