@@ -134,31 +134,36 @@ confirmed_cases %>%
 Row {data-height=550}
 -------------------------------------
     
-### Progress Since 1st Case {.no-padding}
+### Progress Since 100th Case {.no-padding}
     
-```{r Progress since 1st Case}
+```{r Progress since 100th Case}
 confirmed_cases_by_country <- confirmed_cases %>% country_current_total()
 
 most_cases_country <- confirmed_cases_by_country %>% 
   filter(date_key == max(.$date_key) & `Country/Region` != "Others") %>% 
   arrange(desc(date_val)) %>% 
-  top_n(5, date_val)
+  top_n(4, date_val)
 
 confirmed_cases_spread <- confirmed_cases_by_country %>% 
-  filter(date_val > 0) %>%
+  filter(date_val > 100) %>%
   split(.$`Country/Region`) %>%
   purrr::map(function(x) mutate(x, x_axis = c(1:nrow(x))))
 
 confirmed_cases_spread <- do.call("rbind.data.frame", confirmed_cases_spread)
 
-color_scheme <- c("#003399","#FF2B4F", "#fcab27", "#3686d3","darkgrey")
+color_scheme <- c("#003399","#FF2B4F", "#fcab27", "darkgrey", "#3686d3")
 
 confirmed_cases_spread %>%
-  filter(`Country/Region` %in% most_cases_country$`Country/Region`) %>%
-  ggplot(aes(x_axis, date_val, color = `Country/Region`)) +
-  geom_line(size = 1) +
+  mutate(country_label = case_when(
+    `Country/Region` %in% most_cases_country$`Country/Region` ~ `Country/Region`,
+    T ~ "Other"
+  )) %>%
+  ggplot(aes(x_axis, date_val, group = `Country/Region`,  color = `country_label`)) +
+  geom_line(data = . %>% filter(`Country/Region` %in% most_cases_country$`Country/Region`), size = 1) +
+  geom_line(data = . %>% filter(!`Country/Region` %in% most_cases_country$`Country/Region`), alpha = 0.35) +
+  scale_y_continuous(breaks = c(0, 100, 1000, 10000, 60000), trans = "log") +
   scale_color_manual(values = color_scheme) + 
-  labs(x = "Days since 1st Recorded Case", y = "# Confirmed Cases", color = "Country")
+  labs(x = "Days since 100th Recorded Case", y = "# Confirmed Cases (Log)", color = "Country")
 ```
     
 ### Current Tally {.no-padding}
