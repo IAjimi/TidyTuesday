@@ -1,4 +1,5 @@
 library("schrute")
+llibrary(tidyverse)
 
 office_ratings <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-03-17/office_ratings.csv')
 office_transcripts <- schrute::theoffice
@@ -14,6 +15,10 @@ office_ratings %>%
   facet_grid(~ season)
 
 
+### THE FINALE EFFECT
+office_ratings %>% 
+  ggplot(aes(episode, imdb_rating)) +
+  geom_point()
 
 
 ##############3
@@ -38,6 +43,21 @@ office_ratings %>%
   left_join(character_text, by = c("season", "episode")) %>%
   filter(character %in% character_count$character) %>%
   filter(imdb_rating > 9) %>%
-  ggplot(aes(imdb_rating, n_lines, color = character)) + 
+  ggplot(aes(n_lines, imdb_rating, color = character)) + 
   geom_point() +
   facet_grid(~ character)
+
+office_ratings %>%
+  left_join(character_text, by = c("season", "episode")) %>%
+  filter(character %in% character_count$character) %>%
+  ggplot(aes(max_length_lines, imdb_rating, color = character)) +
+  geom_jitter()
+
+
+test <- office_ratings %>%
+  left_join(character_text, by = c("season", "episode")) %>% 
+  spread(character, line_val)
+
+reg <- lm(imdb_rating ~ season + episode + character * n_lines + character * mean_length_lines +
+     max_length_lines, data = test)
+summary(reg)
