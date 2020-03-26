@@ -26,4 +26,5 @@ influenza_tests <- url_to_table(url_influenza_tests)
 influenza_visits %>%
   ggplot(aes(Date, `Total ILI`)) + 
   geom_path() +
+  scale_x_date(breaks = "18 days")+
   labs(x = "")

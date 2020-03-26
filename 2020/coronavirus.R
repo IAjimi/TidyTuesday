@@ -6,9 +6,9 @@ library(tidyverse)
 library(gganimate)
 
 ## Reading Data
-confirmed_cases <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Confirmed.csv")
-deaths <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Deaths.csv")
-recoveries <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Recovered.csv")
+confirmed_cases <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv")
+deaths <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv")
+recoveries <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_recovered_global.csv")
 
 ## HELPER FUNCTIONS ####
 ## Helper Function: Format dataset
@@ -26,7 +26,7 @@ country_current_total <- function(df){
     group_by(`Country/Region`, date_key) %>% 
     summarise(date_val = sum(date_val)) %>%
     ungroup()
-    
+  
   return(df)
 }
 
@@ -48,6 +48,7 @@ latest_total <- function(df){
 confirmed_cases <- confirmed_cases %>% format_df()
 deaths <- deaths %>% format_df()
 recoveries <- recoveries %>% format_df()
+
 ### World Map ####
 #partly from https://stackoverflow.com/questions/30706124/plotting-the-world-map-in-r
 WorldData <- map_data('world') %>% filter(region != "Antarctica") %>% fortify 
@@ -109,7 +110,7 @@ ggplot() +
   ease_aes('sine-in-out')
 
 
-### DISEASE SPREAD SINCE FIRST CONFIRMED CASE ####
+### DISEASE SPREAD SINCE 100th CONFIRMED CASE ####
 confirmed_cases_by_country <- confirmed_cases %>% country_current_total()
 
 most_cases_country <- confirmed_cases_by_country %>% 
@@ -118,24 +119,34 @@ most_cases_country <- confirmed_cases_by_country %>%
   top_n(5, date_val)
 
 confirmed_cases_spread <- confirmed_cases_by_country %>% 
-  filter(date_val > 0) %>%
+  filter(date_val > 100) %>%
   split(.$`Country/Region`) %>%
   purrr::map(function(x) mutate(x, x_axis = c(1:nrow(x))))
 
 confirmed_cases_spread <- do.call("rbind.data.frame", confirmed_cases_spread)
 
-color_scheme <- c("Mainland China" = "#003399",
-                  "Iran" = "#FF2B4F",
+color_scheme <- c("China" = "#C76EA9",
+                  "Spain" = "#FF2B4F",
                   "Italy" = "#fcab27",
-                  "South Korea" = "#3686d3",
-                  "France" = "darkgrey")
+                  "US" = "#3686d3",
+                  "Germany" = "#003399",
+                  "Other" = "darkgrey")
 
 confirmed_cases_spread %>%
-  filter(`Country/Region` %in% most_cases_country$`Country/Region`) %>%
-  ggplot(aes(x_axis, date_val, color = `Country/Region`)) +
-  geom_line(size = 1) +
+  mutate(country_label = case_when(
+    `Country/Region` %in% most_cases_country$`Country/Region` ~ `Country/Region`,
+    T ~ "Other"
+  )) %>%
+  ggplot(aes(x_axis, date_val, group = `Country/Region`,  color = `country_label`)) +
+  geom_line(data = . %>% filter(`Country/Region` %in% most_cases_country$`Country/Region`), size = 1) +
+  geom_line(data = . %>% filter(!`Country/Region` %in% most_cases_country$`Country/Region`), alpha = 0.25) + #plots all other countries
+  geom_point(data = . %>% filter(date_key == max(date_key) & country_label != "Other")) +
+  scale_x_continuous(breaks = seq(0, 80, 7)) +
+  scale_y_continuous(breaks = c(1, 100, 1000, 10000, 100000), 
+                     labels = c(1, 100, 1000, 10000, "100000"), #avoid R's exponential notation
+                     trans = "log") +
   scale_color_manual(values = color_scheme) + 
-  labs(x = "Days since 1st Recorded Case", y = "# Confirmed Cases", color = "Country")
+  labs(x = "Days since 100th Recorded Case", y = "# Confirmed Cases", color = "Country")
 
 ### TABLES ####
 total_confirmed_cases <- confirmed_cases %>% latest_total()  %>% rename(`Total Cases` = Total)
@@ -143,7 +154,7 @@ total_deaths <- deaths %>% latest_total() %>% rename(`Total Deaths` = Total)
 total_recoveries <- recoveries  %>% latest_total() %>% rename(`Total Recoveries` = Total)
 
 # Display Table
-total_cases %>% inner_join(total_deaths) %>% inner_join(total_recoveries)
+total_confirmed_cases %>% inner_join(total_deaths) %>% inner_join(total_recoveries)
 
 # Graph
 col_scale <- c("Total Recoveries"= "#00429d", "Ongoing Cases" =  "grey", 
