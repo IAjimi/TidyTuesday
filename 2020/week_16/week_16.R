@@ -70,7 +70,10 @@ p2 <- rankings %>%
              color = '#FF2B4F', size = 2) +
   geom_text(data = . %>% filter(artist %in% top_artist_decade$artist), aes(label = artist), 
             nudge_x = .5, nudge_y = 5, color = '#FF2B4F', size = 4) +
-  labs(x = 'Number of Songs', y = 'Total Points', title = 'Best Rappers, Ranked')
+  geom_text(data = . %>% filter(artist == 'JAY-Z'), aes(label = artist), 
+            nudge_y = 7,  size = 4) +
+  labs(x = 'Number of Songs', y = 'Total Points', title = 'Best Rappers, Ranked') +
+  theme_minimal()
 
 p2 %>% ggplotly(tooltip = 'Artist')
 
@@ -108,39 +111,34 @@ p3 <- artist_lyrics %>%
 p3 %>% ggplotly(tooltip = 'Artist')  
 
 
-## MOST COMMON WORDS
-artist_lyrics %>% 
+## SPECIFIC SENTIMENT 
+p4 <- artist_lyrics %>% 
   mutate(lyric = str_to_lower(lyric)) %>%
   unnest_tokens(word, lyric) %>% 
   anti_join(stop_words, by = "word") %>%
-  group_by(word) %>%
+  left_join(., get_sentiments("nrc"), by = "word") %>%
+  filter(sentiment %in% c('anger', 'joy', 'sadness', 'trust')) %>%
+  filter(!word %in% c('black', 'money', 'white', 'police', 'hood', 'cop', 'bout')) %>% #incorrect associations
+  group_by(artist, track, sentiment) %>%
   count() %>%
-  filter(n <= quantile(n, 0.2))
-
-
-## MEAN SENTIMENT
-artist_lyrics %>% 
-  mutate(lyric = str_to_lower(lyric)) %>%
-  unnest_tokens(word, lyric) %>% 
-  anti_join(stop_words, by = "word") %>%
-  distinct(artist, word, track) %>%
-  group_by(artist, track) %>% 
-  summarize(
-    distinct_words = n()
-  ) %>%
-  group_by(artist) %>%
-  summarise(mean_distinct_words = mean(distinct_words)) %>%
+  group_by(artist, sentiment) %>%
+  summarize(mean_sentiment = mean(n, na.rm = T)) %>%
   inner_join(top_artist, by = "artist") %>%
+  spread(sentiment, mean_sentiment) %>%
   mutate(Artist = paste(artist, '\n',
-                        'Distinct Words: ', round(mean_distinct_words, 0), '\n',
+                        'Anger: ', round(anger, 0), '\n',
+                        'Trust: ', round(trust, 0), '\n',
                         'Total Points: ', points, '\n',
                         sep = '')
   ) %>%
-  ggplot(aes(mean_distinct_words, points, label = Artist)) +
-  geom_jitter(data = . %>% filter(!artist %in% top_artist_decade$artist), size = 2, alpha = 0.5) +
-  geom_point(data = . %>% filter(artist %in% top_artist_decade$artist), 
-             color = '#FF2B4F', size = 2) +
-  geom_text(data = . %>% filter(artist %in% top_artist_decade$artist), aes(label = artist), 
-            nudge_y = 6, color = '#FF2B4F', size = 4) +
-  labs(x = 'Avg. Distinct Words per Song', y = 'Total Points', title = 'Best Rappers, Ranked') +
+  ggplot(aes(anger, trust, label = Artist, size = points, color = points)) +
+  geom_smooth(method = 'lm', se = F, color = '#ff0505') +
+  geom_point(alpha = 0.6) +
+  scale_color_continuous(low = '#ffe6b3', high = '#ff0505') +
+  guides(color = F) +
+  labs(x = 'Anger', y = 'Trust', title = 'Average Count of Words per Sentiment') +
   theme_minimal()
+
+p4 %>%
+  ggplotly(tooltip = 'Artist')
+
