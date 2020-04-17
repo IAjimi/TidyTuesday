@@ -64,12 +64,13 @@ p2 <- rankings %>%
                         'Total Points: ', points, '\n',
                         sep = '')
   ) %>%
+  filter(n > 1) %>%
   ggplot(aes(n, points, label = Artist)) +
   geom_jitter(data = . %>% filter(!artist %in% top_artist_decade$artist), size = 2, alpha = 0.5) +
   geom_point(data = . %>% filter(artist %in% top_artist_decade$artist), 
              color = '#FF2B4F', size = 2) +
   geom_text(data = . %>% filter(artist %in% top_artist_decade$artist), aes(label = artist), 
-            nudge_x = .5, nudge_y = 5, color = '#FF2B4F', size = 4) +
+            nudge_x = .7, nudge_y = 5, color = '#FF2B4F', size = 4) +
   geom_text(data = . %>% filter(artist == 'JAY-Z'), aes(label = artist), 
             nudge_y = 7,  size = 4) +
   labs(x = 'Number of Songs', y = 'Total Points', title = 'Best Rappers, Ranked') +
@@ -134,8 +135,12 @@ p4 <- artist_lyrics %>%
   ggplot(aes(anger, trust, label = Artist, size = points, color = points)) +
   geom_smooth(method = 'lm', se = F, color = '#ff0505') +
   geom_point(alpha = 0.6) +
+  geom_point(data = . %>% filter(artist %in% top_artist_decade$artist), 
+             color = '#FF2B4F') +
+  geom_text(data = . %>% filter(artist %in% top_artist_decade$artist), aes(label = artist), 
+            nudge_y = 2, color = '#FF2B4F', size = 4) +
   scale_color_continuous(low = '#ffe6b3', high = '#ff0505') +
-  guides(color = F) +
+  guides(color = F, size = F) +
   labs(x = 'Anger', y = 'Trust', title = 'Average Count of Words per Sentiment') +
   theme_minimal()
 
