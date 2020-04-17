@@ -1,8 +1,10 @@
+## LOADING LIBRARIES
 library(plotly)
 library(genius)
 library(tidyverse)
 library(tidytext)
 
+## IMPORTING DATA
 polls <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-04-14/polls.csv')
 rankings <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-04-14/rankings.csv')
 
@@ -14,7 +16,7 @@ rankings <- rankings %>%
            artist == 'Missy Elliot' ~ 'Missy Elliott',
            artist == 'Outkast' ~ 'OutKast',
            artist == 'The Notorious B.I.G' ~ 'The Notorious B.I.G.',
-           artist == '2	Wu-Tan Clan' ~ '2	Wu-Tang Clan',
+           artist == 'Wu-Tan Clan' ~ 'Wu-Tang Clan',
            T ~ artist
          )) 
 
