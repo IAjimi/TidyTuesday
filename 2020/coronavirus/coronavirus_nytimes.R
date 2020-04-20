@@ -33,7 +33,7 @@ confirmed_cases_spread %>%
   geom_point(data = . %>% filter(date == max(date) & county_label != "Other")) +
   geom_point(data = . %>% filter(date == "2020-03-22" & county_label != "Other"), 
              shape = 17, size = 2.5) + #date of shelter in place order
-  scale_x_continuous(breaks = seq(0, 80, 7), limits = c(0, 31)) +
+  scale_x_continuous(breaks = seq(0, 80, 7), limits = c(0, 45)) +
   scale_y_continuous(breaks = c(1, 100, 1000, 10000, 100000), 
                      labels = c(1, 100, 1000, 10000, "100000"), #avoid R's exponential notation
                      trans = "log"
@@ -53,7 +53,7 @@ confirmed_cases_spread %>%
   geom_point(data = . %>% filter(date == max(date) & county_label != "Other")) +
   geom_point(data = . %>% filter(date == "2020-03-22" & county_label != "Other"), 
              shape = 17, size = 2.5) + #date of shelter in place order
-  scale_x_continuous(breaks = seq(0, 80, 7), limits = c(0, 38)) +
+  scale_x_continuous(breaks = seq(0, 80, 7), limits = c(0, 45)) +
   scale_y_continuous(limits = c(0, 1.25), breaks = seq(0, 1.25, 0.25), labels = percent) + 
   #breaks = c(1, 100, 1000, 10000, 100000), 
   #                   labels = c(1, 100, 1000, 10000, "100000"), #avoid R's exponential notation
@@ -74,7 +74,7 @@ confirmed_cases_spread %>%
   geom_point(data = . %>% filter(date == "2020-03-22" & county_label != "Other"), 
              shape = 17, size = 2.5) + #date of shelter in place order
   geom_point(data = . %>% filter(date == max(date) & county_label != "Other")) +
-  scale_x_continuous(breaks = seq(0, 80, 7), limits = c(0, 38)) +
+  scale_x_continuous(breaks = seq(0, 80, 7), limits = c(0, 45)) +
   scale_y_continuous(limits = c(0, 1.25), breaks = seq(0, 1.25, 0.25), labels = percent) + 
   #breaks = c(1, 100, 1000, 10000, 100000), 
   #                   labels = c(1, 100, 1000, 10000, "100000"), #avoid R's exponential notation
@@ -83,24 +83,6 @@ confirmed_cases_spread %>%
   scale_color_manual(values = color_scheme) + 
   labs(x = "Days since 100th Recorded Case", y = "Growth in Deaths", color = "County")
 
-## DEATHS
-confirmed_cases_spread %>%
-  mutate(county_label = case_when(
-    county %in% noteworthy_county$county ~ county,
-    T ~ "Other"
-  )) %>%
-  filter(death_growth != Inf) %>%
-  ggplot(aes(x_axis, deaths, group = county,  color = county_label)) +
-  geom_line(data = . %>% filter(!county %in% noteworthy_county$county), alpha = 0.35) + #plots all other countries
-  geom_line(data = . %>% filter(county %in% noteworthy_county$county), size = 1) +
-  geom_point(data = . %>% filter(date == max(date) & county_label != "Other")) +
-  scale_x_continuous(breaks = seq(0, 80, 7), limits = c(0, 31)) +
-  scale_y_continuous(breaks = c(1, 10, 100, 1000, 10000, 100000), 
-                    labels = c(1, 10, 100, 1000, 10000, "100000"), #avoid R's exponential notation
-                    limits = c(1, 10000),
-                     trans = "log") +
-  scale_color_manual(values = color_scheme) + 
-  labs(x = "Days since 100th Recorded Case", y = "Growth in # Deaths", color = "County")
 
 ## GROWTH IN CONFIRMED CASES: COUNTRY + REGION ###
 confirmed_cases <- usa_county_corona %>%
@@ -184,3 +166,15 @@ p %>% ggplotly(tooltip = 'Cases')
 
 ## Add county name, number of cases, deaths to ploty label
 ## remove color
+
+
+## DAILY NEW CASES NYC ###
+confirmed_cases_spread %>%
+  filter(county == 'New York City') %>%
+  mutate(new_cases = cases - lag_cases) %>%
+  ggplot(aes(date, new_cases)) +
+  geom_col(fill = '#FF2B4F', color = 'white', alpha = 0.4) +
+  geom_smooth(se = F, color = '#FF2B4F') +
+  labs(x = '', y = 'New Cases', title = 'New York City Daily New COVID-19 ') +
+  theme_minimal()
+

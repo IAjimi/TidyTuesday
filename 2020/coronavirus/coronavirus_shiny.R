@@ -16,7 +16,6 @@ ui <- fluidPage(
   sidebarLayout(
     sidebarPanel(
       h1("COVID-19 U.S. Dashboard"),
-      h2("Setup"),
       h3("Add counties to highlight:"),
       helpText("You can either select from the list below of most populous U.S. counties or type in 
                your selection below. Your choices will be highlighted in the line plots for more 
@@ -27,8 +26,11 @@ ui <- fluidPage(
        
       selectInput("select_county_2", label = 'Select County 2',
                   choices = list('New York City', 'Napa', "New London", 'Baltimore'), 
-                  selected = 'Baltimore')
-      
+                  selected = 'Baltimore'),
+      br(),
+      h3("Note:"),
+      p('The data used to create this dashboard comes from John Hopkins University and the New York Times.'),
+      p('Please wait a minute or so for the full dashboard to load.')
       
     ),
     
@@ -39,7 +41,7 @@ ui <- fluidPage(
         type = "tabs",
                     tabPanel("Summary", p("summary")),
                     tabPanel("Map View", 
-                             plotlyOutput("county_map_view")
+                             plotOutput("county_map_view",  width = "100%")
                     ),
         
                   tabPanel("Confirmed Cases", 
@@ -97,8 +99,11 @@ server <- function(input, output) {
         T ~ "Other"
       ),
       `County` = paste(county, ", ", state, '\n',
-                       format.Date(date, "%N %d"), '\n',
-                       format(cases, big.mark = ',', small.interval = 3), ' confirmed cases', sep = ''))
+                       'Date: ', format.Date(date, "%B %d"), '\n',
+                      format(cases, big.mark = ',', small.interval = 3), ' confirmed cases', '\n',
+                      format(deaths, big.mark = ',', small.interval = 3), ' deaths', 
+                      sep = '')
+      )
     
     ## MAP PLOT PREP ######################################################
     ## IMPORT DATA 
@@ -129,8 +134,11 @@ server <- function(input, output) {
     ## ADDING LABEL FOR PLOTLY
     county_graph <-  county_graph %>%
       mutate(`County` = paste(county, ", ", state, '\n',
-                     format.Date(date, "%N %d"), '\n',
-                     format(cases, big.mark = ',', small.interval = 3), ' confirmed cases', sep = ''))
+                     'Date: ', format.Date(date, "%B %d"), '\n',
+                     format(cases, big.mark = ',', small.interval = 3), ' confirmed cases', '\n',
+                      format(deaths, big.mark = ',', small.interval = 3), ' deaths', 
+                     sep = '')
+    )
     
     ## SAVING OUTPUT
     list(confirmed_cases_spread, noteworthy_county, color_scheme, county_graph)
@@ -149,7 +157,7 @@ server <- function(input, output) {
       geom_line(data = . %>% filter(!county %in% noteworthy_county), alpha = 0.25) + #plots all other countries
       geom_line(data = . %>% filter(county %in% noteworthy_county), size = 1) +
       geom_point(data = . %>% filter(date == max(date) & county_label != "Other")) +
-      scale_x_continuous(breaks = seq(0, 80, 7), limits = c(0, 31)) +
+      scale_x_continuous(breaks = seq(0, 80, 7), limits = c(0, 45)) +
       scale_y_continuous(breaks = c(1, 100, 1000, 10000, 100000), 
                          labels = c(1, 100, 1000, 10000, "100000"), #avoid R's exponential notation
                          trans = "log"
@@ -172,7 +180,7 @@ server <- function(input, output) {
       geom_line(data = . %>% filter(!county %in% noteworthy_county), alpha = 0.25) + #plots all other countries
       geom_point(data = . %>% filter(date == max(date) & county_label != "Other")) +
       geom_line(data = . %>% filter(county %in% noteworthy_county), size = 1) +
-      scale_x_continuous(breaks = seq(0, 80, 7), limits = c(0, 31)) +
+      scale_x_continuous(breaks = seq(0, 80, 7), limits = c(0, 45)) +
       scale_y_continuous(limits = c(0, 1.25), breaks = seq(0, 1.25, 0.25), labels = percent) + 
       scale_color_manual(values = color_scheme) + 
       labs(x = "Days since 100th Recorded Case", y = "Growth in Confirmed Cases", color = "County")
@@ -194,7 +202,7 @@ server <- function(input, output) {
       geom_line(data = . %>% filter(!county %in% noteworthy_county), alpha = 0.25) + #plots all other countries
       geom_line(data = . %>% filter(county %in% noteworthy_county), size = 1) +
       geom_point(data = . %>% filter(date == max(date) & county_label != "Other")) +
-      scale_x_continuous(breaks = seq(0, 80, 7), limits = c(0, 31)) +
+      scale_x_continuous(breaks = seq(0, 80, 7), limits = c(0, 45)) +
       scale_y_continuous(breaks = c(1, 100, 1000, 10000, 100000), 
                          labels = c(1, 100, 1000, 10000, "100000"), #avoid R's exponential notation
                          trans = "log"
@@ -217,7 +225,7 @@ server <- function(input, output) {
       geom_line(data = . %>% filter(!county %in% noteworthy_county), alpha = 0.25) + #plots all other countries
       geom_point(data = . %>% filter(date == max(date) & county_label != "Other")) +
       geom_line(data = . %>% filter(county %in% noteworthy_county), size = 1) +
-      scale_x_continuous(breaks = seq(0, 80, 7), limits = c(0, 31)) +
+      scale_x_continuous(breaks = seq(0, 80, 7), limits = c(0, 45)) +
       scale_y_continuous(limits = c(0, 1.25), breaks = seq(0, 1.25, 0.25), labels = percent) + 
       scale_color_manual(values = color_scheme) + 
       labs(x = "Days since 100th Recorded Case", y = "Growth in Deaths", color = "County")
@@ -227,7 +235,7 @@ server <- function(input, output) {
     
   })
   
-  output$county_map_view <- renderPlotly({
+  output$county_map_view <- renderPlot({
     response <- dataInput()
     county_graph <- response[[4]]
 
@@ -260,8 +268,7 @@ server <- function(input, output) {
     
     
     mapplot # %>% ggplotly(tooltip = 'County') #includeHTML
-  })
-  
+  }, height = 2*500, width = 1200)
   
 }
 
