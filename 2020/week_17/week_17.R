@@ -10,32 +10,6 @@ gdpr_text <- readr::read_tsv('https://raw.githubusercontent.com/rfordatascience/
 gdpr_violations <- gdpr_violations %>%
   mutate(date = as.Date(date, '%m/%d/%y'))
 
-
-## MOST COMMON types
-common_types_violation <- gdpr_violations %>%
-  group_by(type) %>%
-  count() %>%
-  arrange(desc(n)) %>%
-  head(2)
-
-gdpr_violations %>%
-  mutate(date = as.Date(date, '%m/%d/%y')) %>%
-  mutate(type_label = case_when(
-    type == common_types_violation$type[1] ~ 'Poor data processing',
-    type == common_types_violation$type[2] ~ 'Lack of information security',
-    T ~ ' Other'
-  )) %>%
-  filter(date >= '2020-01-01') %>%
-  ggplot(aes(date, price, color = type_label)) +
-  geom_point() +
-  geom_text(data = . %>% filter(price > quantile(price, 0.97)),
-                                aes(label = name), nudge_y =  1500000) +
-  scale_y_continuous(labels = dollar_format(prefix = '', suffix = ' ???')) +
-  scale_color_manual(values = c("darkgrey", "#003399", "#FF2B4F")) +
-  labs(x= '', y = 'Fine Amount', color = 'Reason', 
-       title = 'GDPR Fines', subtitle = 'Fines Over Time')+ 
-  theme(legend.position="bottom")
-
 ## CUMULATIVE FINEs BY COUNTRY
 cum_fines_df <- gdpr_violations %>%
   group_by(name) %>%
@@ -90,6 +64,54 @@ ggplot(waffle_data, aes(x, y, fill = group)) +
        subtitle = 'Spain has issued the most fines by far (69), followed by Germany (27) and Romania (26)') +
   theme_waffle()
 
+### ANOTHER WAFFLE
+# First Aggregation to get % amount fined by country
+per_fine_country <- gdpr_violations %>%
+  group_by(name) %>%
+  summarise(tot_fines_country = sum(price)) %>%
+  mutate(tot_fines = sum(tot_fines_country),
+         per_fines = tot_fines_country / tot_fines)
+
+# Second to simplify for graph, grouping every country that is below 10% together
+per_fine_country <- per_fine_country %>%
+  mutate(name = case_when(
+    per_fines < 0.1 ~ ' Other',
+    T ~ name
+  )) %>%
+  group_by(name) %>%
+  summarise(tot_fines_country = sum(tot_fines_country)) %>%
+  mutate(tot_fines = sum(tot_fines_country),
+         per_fines = round(100 * tot_fines_country / tot_fines, 0))
+
+# Preparing the plot: ggwaffle's waffle_iron is based on count by country
+# so we need to repeat the country so that the % of rows it has in the df maps
+# to its % of blocks in the waffle plot
+per_fine_country <- per_fine_country[rep(seq_len(nrow(per_fine_country)), max(per_fine_country$per_fines)), ] %>% #repeats df by highest amount of fines
+  split(.$name) %>% #then we whittle it down so that countries appear up to the percentage of fines they are responsible for
+  map(mutate, rownum = row_number()) %>%
+  map(filter, per_fines >= rownum) %>%
+  do.call('rbind', .) # sorry!
+
+# Setting Color Mappings
+waffle_fill <- c(' Other' = 'grey', #space so it appears at the top of legend
+                 'France' = 'red',
+                 'Germany' = '#f4777f',
+                 'Italy' = '#93003a',
+                 'Austria' = '#00429d')
+
+# The final plot
+per_fine_country %>%
+  waffle_iron(aes_d(group = name)) %>%
+  ggplot(aes(x, y, fill = group)) + 
+  geom_waffle() +
+  coord_equal() +
+  scale_fill_manual(values = waffle_fill) + 
+  labs(x = '', y ='', fill = 'Country',
+       title = 'GDPR Fines, Total Amount Issued by Country',
+       subtitle = 'France is responsible for 33% of the total value of GDPR fines, followed by Italy (26%) and Germany (16%)') +
+  theme_waffle()
+
+## OTHER PLOTS ###
 ## AVERAGE FINE BY COUNTRY (WORK IN PROGRESS)
 top_fines <- gdpr_violations %>%
   group_by(type) %>% 
@@ -142,4 +164,3 @@ avg_country_fines_by_type %>%
   scale_color_manual(values = waffle_fill) +
   labs(title = 'GDPR Fines') +
   facet_wrap(~ type , scales = 'free_x')
-  
