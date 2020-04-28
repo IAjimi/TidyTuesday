@@ -6,7 +6,6 @@ library(rvest)
 library(tidyverse)
 library(scales)
 library(plotly)
-
 library(shiny)
 
 ###Shiny ####
@@ -39,7 +38,9 @@ ui <- fluidPage(
       tabsetPanel(
         
         type = "tabs",
-                    tabPanel("Summary", p("summary")),
+                    tabPanel("Summary", 
+                             p("summary"),
+                             plotlyOutput("summary_graph")),
                     tabPanel("Map View", 
                              plotOutput("county_map_view",  width = "100%")
                     ),
@@ -76,6 +77,18 @@ server <- function(input, output) {
 
     ## IMPORT DATA 
     usa_county_corona <- read_csv("https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv")
+    
+    ## SUMMARY PLOT PREP ######################################################################3
+    confirmed_cases_history <- usa_county_corona %>% 
+      filter(cases > 1) %>%
+      split(.$county) %>%
+      purrr::map(function(x) mutate(x, x_axis = c(1:nrow(x)))) %>%
+      purrr::map(mutate,
+                 lag_cases = lag(cases),
+                 lag_deaths = lag(deaths),
+                 cases_growth = (cases - lag_cases) / lag_cases,
+                 deaths_growth = (deaths - lag_deaths) / lag_deaths) %>%
+      do.call("rbind.data.frame", .)
     
     ## LINE PLOT PREP ########################################################################################
     confirmed_cases_spread <- usa_county_corona %>% 
@@ -141,7 +154,40 @@ server <- function(input, output) {
     )
     
     ## SAVING OUTPUT
-    list(confirmed_cases_spread, noteworthy_county, color_scheme, county_graph)
+    list(confirmed_cases_spread, noteworthy_county, color_scheme, county_graph, confirmed_cases_history)
+  })
+  
+  output$summary_graph <- renderPlotly({
+    
+    response <- dataInput()
+    
+    confirmed_cases_history <- response[[5]]
+    noteworthy_county <- response[[2]]
+    
+    p <- confirmed_cases_history %>%
+      filter(county == 'New York City') %>%
+      mutate(`New Cases` = cases - lag_cases,
+             `New Deaths` = deaths - lag_deaths,
+             Date = paste(format.Date(date, "%B %d"), '\n',
+                          'Total confirmed cases: ', format(cases, big.mark = ',', small.interval = 3), '\n',
+                          'New cases: ', format(`New Cases`, big.mark = ',', small.interval = 3),  '\n',
+                          'Total deaths: ', format(deaths, big.mark = ',', small.interval = 3), '\n',
+                          'New deaths: ', format(`New Deaths`, big.mark = ',', small.interval = 3),
+                          sep = '')
+      ) %>%
+      gather(var_key, var_val, c(`New Cases`, `New Deaths`)) %>%
+      ggplot(aes(date, var_val, fill = var_key, label = Date)) +
+      geom_col(color = 'white', alpha = 0.6) +
+      geom_smooth(se = F, color = '#FF2B4F',
+                  method = lm, formula = y ~ splines::bs(x, 4)) +
+      guides(color = F, fill = F) +
+      labs(x = '', y = '', title = 'COVID-19, Daily Counts') +
+      facet_grid(var_key ~ county, scales = "free") +
+      theme_minimal()
+    
+    p %>% ggplotly(tooltip = 'Date')
+    
+    
   })
   
   
@@ -183,7 +229,7 @@ server <- function(input, output) {
       scale_x_continuous(breaks = seq(0, 80, 7), limits = c(0, 45)) +
       scale_y_continuous(limits = c(0, 1.25), breaks = seq(0, 1.25, 0.25), labels = percent) + 
       scale_color_manual(values = color_scheme) + 
-      labs(x = "Days since 100th Recorded Case", y = "Growth in Confirmed Cases", color = "County")
+      labs(x = "Days since 100th Recorded Case", y = "Growth in Total Confirmed Cases", color = "County")
     
     
     p2  %>% ggplotly(tooltip = 'County')
@@ -228,7 +274,7 @@ server <- function(input, output) {
       scale_x_continuous(breaks = seq(0, 80, 7), limits = c(0, 45)) +
       scale_y_continuous(limits = c(0, 1.25), breaks = seq(0, 1.25, 0.25), labels = percent) + 
       scale_color_manual(values = color_scheme) + 
-      labs(x = "Days since 100th Recorded Case", y = "Growth in Deaths", color = "County")
+      labs(x = "Days since 100th Recorded Case", y = "Growth in Total Deaths", color = "County")
     
     
     p2  %>% ggplotly(tooltip = 'County')

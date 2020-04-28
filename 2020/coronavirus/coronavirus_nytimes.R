@@ -169,12 +169,25 @@ p %>% ggplotly(tooltip = 'Cases')
 
 
 ## DAILY NEW CASES NYC ###
-confirmed_cases_spread %>%
+p <- confirmed_cases_spread %>%
   filter(county == 'New York City') %>%
-  mutate(new_cases = cases - lag_cases) %>%
-  ggplot(aes(date, new_cases)) +
-  geom_col(fill = '#FF2B4F', color = 'white', alpha = 0.4) +
-  geom_smooth(se = F, color = '#FF2B4F') +
-  labs(x = '', y = 'New Cases', title = 'New York City Daily New COVID-19 ') +
+  mutate(`New Cases` = cases - lag_cases,
+         `New Deaths` = deaths - lag_deaths,
+         Date = paste(format.Date(date, "%B %d"), '\n',
+                      'Total confirmed cases: ', format(cases, big.mark = ',', small.interval = 3), '\n',
+                      'New cases: ', format(`New Cases`, big.mark = ',', small.interval = 3),  '\n',
+                      'Total deaths: ', format(deaths, big.mark = ',', small.interval = 3), '\n',
+                      'New deaths: ', format(`New Deaths`, big.mark = ',', small.interval = 3),
+                      sep = '')
+         ) %>%
+  gather(var_key, var_val, c(`New Cases`, `New Deaths`)) %>%
+  ggplot(aes(date, var_val, fill = var_key, label = Date)) +
+  geom_col(color = 'white', alpha = 0.6) +
+  geom_smooth(se = F, color = '#FF2B4F',
+              method = lm, formula = y ~ splines::bs(x, 4)) +
+  guides(color = F, fill = F) +
+  labs(x = '', y = '', title = 'COVID-19, Daily Counts') +
+  facet_grid(var_key ~ county, scales = "free_y") +
   theme_minimal()
 
+p %>% ggplotly(tooltip = 'Date')
