@@ -56,8 +56,9 @@ grosses %>%
   geom_path(data = . %>% filter(week_ending >= '2020-01-01'), color = '#c70039', size = 0.715) +
   geom_point(data = . %>% filter(week_ending == max(week_ending)), color = '#c70039', size = 1) +
   geom_text_repel(data = . %>% filter(week_ending == max(week_ending) & show == 'Aladdin'), 
-                  aes(label = '2020 before COVID-19 closings'), 
-                  nudge_x = 2, nudge_y = -10, color = '#c70039') +
+                  aes(label = '2020'), 
+                  nudge_x = 1, nudge_y = -10, color = '#c70039') +
   labs(x = 'Week', y = 'Avg Ticket Price ($)') +
   facet_grid(row = vars(show)) +
   theme_bw()
+  
