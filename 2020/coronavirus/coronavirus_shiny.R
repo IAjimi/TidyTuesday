@@ -203,7 +203,7 @@ server <- function(input, output) {
       geom_line(data = . %>% filter(!county %in% noteworthy_county), alpha = 0.25) + #plots all other countries
       geom_line(data = . %>% filter(county %in% noteworthy_county), size = 1) +
       geom_point(data = . %>% filter(date == max(date) & county_label != "Other")) +
-      scale_x_continuous(breaks = seq(0, 80, 7), limits = c(0, 50)) +
+      scale_x_continuous(breaks = seq(0, 80, 7), limits = c(0, 80)) +
       scale_y_continuous(breaks = c(1, 100, 1000, 10000, 100000), 
                          labels = c(1, 100, 1000, 10000, "100000"), #avoid R's exponential notation
                          trans = "log"
@@ -226,7 +226,7 @@ server <- function(input, output) {
       geom_line(data = . %>% filter(!county %in% noteworthy_county), alpha = 0.25) + #plots all other countries
       geom_point(data = . %>% filter(date == max(date) & county_label != "Other")) +
       geom_line(data = . %>% filter(county %in% noteworthy_county), size = 1) +
-      scale_x_continuous(breaks = seq(0, 80, 7), limits = c(0, 50)) +
+      scale_x_continuous(breaks = seq(0, 80, 7), limits = c(0, 80)) +
       scale_y_continuous(limits = c(0, 1.25), breaks = seq(0, 1.25, 0.25), labels = percent) + 
       scale_color_manual(values = color_scheme) + 
       labs(x = "Days since 100th Recorded Case", y = "Growth in Total Confirmed Cases", color = "County")
@@ -248,7 +248,7 @@ server <- function(input, output) {
       geom_line(data = . %>% filter(!county %in% noteworthy_county), alpha = 0.25) + #plots all other countries
       geom_line(data = . %>% filter(county %in% noteworthy_county), size = 1) +
       geom_point(data = . %>% filter(date == max(date) & county_label != "Other")) +
-      scale_x_continuous(breaks = seq(0, 80, 7), limits = c(0, 50)) +
+      scale_x_continuous(breaks = seq(0, 80, 7), limits = c(0, 80)) +
       scale_y_continuous(breaks = c(1, 100, 1000, 10000, 100000), 
                          labels = c(1, 100, 1000, 10000, "100000"), #avoid R's exponential notation
                          trans = "log"
@@ -271,7 +271,7 @@ server <- function(input, output) {
       geom_line(data = . %>% filter(!county %in% noteworthy_county), alpha = 0.25) + #plots all other countries
       geom_point(data = . %>% filter(date == max(date) & county_label != "Other")) +
       geom_line(data = . %>% filter(county %in% noteworthy_county), size = 1) +
-      scale_x_continuous(breaks = seq(0, 80, 7), limits = c(0, 50)) +
+      scale_x_continuous(breaks = seq(0, 80, 7), limits = c(0, 80)) +
       scale_y_continuous(limits = c(0, 1.25), breaks = seq(0, 1.25, 0.25), labels = percent) + 
       scale_color_manual(values = color_scheme) + 
       labs(x = "Days since 100th Recorded Case", y = "Growth in Total Deaths", color = "County")
