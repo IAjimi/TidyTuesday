@@ -31,3 +31,20 @@ mobile %>%
              aes(color = entity), alpha = 0.6) +
   facet_grid(~ year) + 
   labs(x = 'GDP per Capita', y = 'Avg Mobile Subscription per Person', size = 'Population')
+
+# Plot 3:
+phones <- inner_join(mobile, landline, by = c('entity', 'continent', 'code', 'year'))
+phones <- phones %>%
+  filter(!is.na(mobile_subs) & !is.na(landline_subs)) %>%
+  mutate(tot_pop = (total_pop.x + total_pop.y) / 2,
+         gdp_per_cap = (gdp_per_cap.x + gdp_per_cap.y) / 2,
+         mobile_to_landline = mobile_subs / landline_subs)
+
+phones %>% 
+  filter(mobile_to_landline <= 20) %>%
+  ggplot(aes(year, mobile_to_landline, color = entity)) + 
+  geom_path(color = 'grey', alpha = 0.8) +
+  geom_smooth(aes(group = continent), se = FALSE, color = 'red') +
+  facet_grid(~ continent) + 
+  labs(x = '', y = 'Avg Mobile Subscription per Person')
+# only countries w full data
