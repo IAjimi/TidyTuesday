@@ -8,7 +8,7 @@ library(tidymodels)
 
 hotels <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-02-11/hotels.csv')
 hotels <- hotels %>% 
-  select(-is_canceled, - reservation_status_date) %>%
+  select(-is_canceled, - reservation_status_date, -country, -agent, -company) %>%
   mutate(reservation_status = if_else(reservation_status %in% c('No-Show', 'Canceled'), '1', '0'),
          reservation_status = as.factor(reservation_status),
          children = replace_na(children, 0)
